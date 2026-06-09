@@ -1,0 +1,15 @@
+# 秘密情報（絶対にコミットしない）
+.env
+.env.*
+*.token
+
+# ローカル作業ファイル
+cron.log
+report.log
+posts_raw.json
+posts_90d.json
+posts_yu_30d.json
+*_progress.txt
+*_rows.json
+*_result.txt
+__pycache__/

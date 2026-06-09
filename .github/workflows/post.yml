@@ -33,6 +33,7 @@ jobs:
         run: |
           git config user.name "threads-bot"
           git config user.email "bot@users.noreply.github.com"
+          git pull --no-edit --rebase || true
           git add state.json post_log.jsonl || true
           git commit -m "auto: 投稿ログ更新 [skip ci]" || echo "変更なし"
           git push || echo "push不要"

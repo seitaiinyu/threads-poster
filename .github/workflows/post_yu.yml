@@ -1,0 +1,39 @@
+name: Threads自動投稿（アカウント2 坐骨）
+
+# 時刻はUTC。JST = UTC+9。
+# 好調帯 JST 6,7,8 / 18,19,20 / 22,23時 → UTC 21,22,23 / 9,10,11 / 13,14時
+# アカウント1と分単位をずらす（:09 :24 :39 :54）。1日上限30ツリー。
+on:
+  schedule:
+    - cron: "9,24,39,54 21,22,23,9,10,11,13,14 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: threads-post-yu
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 投稿
+        env:
+          ACCOUNT: "yu"
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID_YU }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN_YU }}
+        run: python3 auto_post.py
+      - name: 状態を保存
+        run: |
+          git config user.name "threads-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git pull --no-edit --rebase || true
+          git add state_yu.json post_log_yu.jsonl || true
+          git commit -m "auto: アカウント2 投稿ログ更新 [skip ci]" || echo "変更なし"
+          git push || echo "push不要"

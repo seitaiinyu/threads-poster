@@ -8,6 +8,9 @@ API = "https://graph.threads.net/v1.0"
 DIR = os.path.dirname(os.path.abspath(__file__))
 JST = timezone(timedelta(hours=9))
 TOK = os.environ["THREADS_ACCESS_TOKEN"]
+ACCT = os.environ.get("ACCOUNT", "diet")
+LOGFILE = "post_log_yu.jsonl" if ACCT == "yu" else "post_log.jsonl"
+ACCT_LABEL = "koshigaya_seitai_yu" if ACCT == "yu" else "koshigaya_diet_seitai"
 
 
 def insights(mid):
@@ -26,7 +29,7 @@ def insights(mid):
 
 def main():
     day = sys.argv[1] if len(sys.argv) > 1 else datetime.now(JST).strftime("%Y-%m-%d")
-    logp = os.path.join(DIR, "post_log.jsonl")
+    logp = os.path.join(DIR, LOGFILE)
     if not os.path.exists(logp):
         print("ログがありません"); return
     recs = []
@@ -50,7 +53,7 @@ def main():
         time.sleep(0.05)
 
     out = []
-    out.append(f"===== 日次レポート {day}（アカウント1: koshigaya_diet_seitai）=====")
+    out.append(f"===== 日次レポート {day}（{ACCT_LABEL}）=====")
     out.append(f"投稿ツリー数: {len(rows)}")
     tv = sum(x["views"] for x in rows); tl = sum(x["likes"] for x in rows); tr = sum(x["replies"] for x in rows)
     out.append(f"合計閲覧: {tv:,}  合計いいね: {tl}  合計返信: {tr}")
@@ -81,7 +84,7 @@ def main():
         out.append(f"  {x['views']:>6} views | L{x['likes']} R{x['replies']} | {x['hook']}")
 
     res = "\n".join(out)
-    open(os.path.join(DIR, f"daily_report_{day}.txt"), "w", encoding="utf-8").write(res)
+    open(os.path.join(DIR, f"daily_report_{ACCT}_{day}.txt"), "w", encoding="utf-8").write(res)
     print(res)
 
 

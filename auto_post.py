@@ -53,12 +53,18 @@ def save(name, obj):
     json.dump(obj, open(os.path.join(DIR, name), "w"), ensure_ascii=False, indent=1)
 
 
+ACTIVE_FROM = "2026-06-11"  # この日(JST)から稼働。これより前はスキップ。
+
+
 def main():
+    today = datetime.now(JST).strftime("%Y-%m-%d")
+    if today < ACTIVE_FROM:
+        print(f"稼働開始日({ACTIVE_FROM})前のためスキップ（本日 {today}）")
+        return
     bank = load("content_bank.json", [])
     if not bank:
         print("バンクが空です"); return
     state = load("state.json", {"idx": 0, "day": "", "count": 0})
-    today = datetime.now(JST).strftime("%Y-%m-%d")
     if state["day"] != today:
         state["day"] = today
         state["count"] = 0

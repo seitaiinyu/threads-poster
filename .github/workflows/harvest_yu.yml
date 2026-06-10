@@ -1,0 +1,33 @@
+name: 勝ちネタ発掘（アカウント2 坐骨）
+
+# 週1（毎週月曜 JST 9:00 = UTC 日曜 0:00）に過去投稿を閲覧数でランキングし
+# candidates_yu.json を更新（改良済みは harvested_yu.json で除外＝重複防止）
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 発掘
+        env:
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID_YU }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN_YU }}
+        run: python3 harvest_yu.py 30
+      - name: 候補を保存
+        run: |
+          git config user.name "threads-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git pull --no-edit --rebase || true
+          git add candidates_yu.json || true
+          git commit -m "auto: 勝ちネタ候補更新 [skip ci]" || echo "変更なし"
+          git push || echo "push不要"

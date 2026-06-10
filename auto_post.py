@@ -14,9 +14,11 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 JST = timezone(timedelta(hours=9))
 
 # アカウント別設定
+# cap: 1日の上限ツリー数 / cta_every: 何投稿に1回CTAを入れるか（1=毎回）
 CONFIG = {
-    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 35, "from": "2026-06-11"},
-    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11"},
+    # アカウント1はリーチ制限からの回復のため少量・CTA控えめ
+    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 7,  "from": "2026-06-11", "cta_every": 4},
+    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11", "cta_every": 1},
 }
 
 ACCT = os.environ.get("ACCOUNT", "diet")
@@ -78,7 +80,11 @@ def main():
         return
 
     tree = bank[state["idx"] % len(bank)]
-    segs = tree["segments"]
+    segs = list(tree["segments"])
+    # CTA抑制: cta_every回に1回だけCTA（最終段）を残し、それ以外は外す
+    cta_every = CFG.get("cta_every", 1)
+    if cta_every > 1 and len(segs) >= 2 and (state["count"] % cta_every != 0):
+        segs = segs[:-1]  # 最終段(CTA)を除外
     try:
         ids = publish_tree(segs)
         rec = {"ts": datetime.now(JST).isoformat(), "bank_idx": state["idx"] % len(bank),

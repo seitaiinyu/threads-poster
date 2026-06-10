@@ -18,7 +18,7 @@ JST = timezone(timedelta(hours=9))
 CONFIG = {
     # アカウント1はリーチ制限からの回復のため少量・CTA控えめ
     "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 7,  "from": "2026-06-11", "cta_every": 0},
-    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11", "cta_every": 1},
+    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11", "cta_every": 4},
 }
 
 ACCT = os.environ.get("ACCOUNT", "diet")

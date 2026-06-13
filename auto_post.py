@@ -68,8 +68,15 @@ def post_one(bank, state, cap):
     tree = bank[state["idx"] % len(bank)]
     segs = list(tree["segments"])
     cta_every = CFG.get("cta_every", 1)
-    if len(segs) >= 2 and (cta_every == 0 or (cta_every > 1 and state["count"] % cta_every != 0)):
-        segs = segs[:-1]  # 最終段(CTA)を除外（cta_every=0は常にCTAなし＝回復期）
+    cta_turn = cta_every > 0 and (state["count"] % cta_every == 0)
+    if "cta" in tree:
+        # 3部構成: ③は通常「まとめ」。CTA回は③をCTAに置換（常に3投稿）
+        if cta_turn:
+            segs = segs[:2] + [tree["cta"]]
+    else:
+        # 旧形式: CTAは最終段。非CTA回は外す
+        if len(segs) >= 2 and (cta_every == 0 or (cta_every > 1 and not cta_turn)):
+            segs = segs[:-1]
     ids = publish_tree(segs)
     rec = {"ts": datetime.now(JST).isoformat(), "bank_idx": state["idx"] % len(bank),
            "type": tree.get("type"), "post_ids": ids, "first_id": ids[0],

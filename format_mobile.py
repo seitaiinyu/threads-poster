@@ -24,18 +24,29 @@ def _split_by(line, seps, min_len):
     return out
 
 
-def split_long(line):
-    """長い行を、まず句点(。!?)で文単位に、まだ長ければ読点(、)で折る。"""
-    if len(line) <= MAX or is_list(line):
+def split_eq(line):
+    """行中の ＝ / → の前で改行（A＝B＝C → 各行に）。先頭の連結記号は保持。"""
+    if "＝" not in line and "→" not in line:
         return [line]
-    pieces = _split_by(line, "。！？", 1)  # 文単位
-    out = []
-    for p in pieces:
-        if len(p) <= MAX:
-            out.append(p)
-        else:
-            out.extend(_split_by(p, "、", 8))  # 読点でさらに分割
-    return out
+    out = re.split(r"(?=[＝→])", line)
+    return [s for s in out if s]
+
+
+def split_long(line):
+    """長い行を、まず ＝/→ 連結で折り、次に句点(。!?)、最後に読点(、)で折る。"""
+    if is_list(line) or len(line) <= MAX:
+        return [line]
+    result = []
+    for part in split_eq(line):
+        if len(part) <= MAX:
+            result.append(part)
+            continue
+        for p in _split_by(part, "。！？", 1):  # 文単位
+            if len(p) <= MAX:
+                result.append(p)
+            else:
+                result.extend(_split_by(p, "、", 8))  # 読点でさらに
+    return result
 
 
 def fmt(seg):

@@ -36,6 +36,33 @@ def post(path, params):
         return json.loads(r.read().decode())
 
 
+def fetch_recent(hours=48):
+    """直近の自分の親投稿から、(フック集合, 当日(JST)の親投稿数) を返す。
+    Git状態に依存せず、重複防止と当日上限の両方をAPI実データで担保する。"""
+    since = int(time.time()) - hours * 3600
+    url = (f"{API}/{UID}/threads?fields=text,timestamp,is_reply&since={since}"
+           f"&limit=100&access_token=" + urllib.parse.quote(TOK))
+    hooks = set()
+    today = datetime.now(JST).strftime("%Y-%m-%d")
+    today_count = 0
+    pages = 0
+    while url and pages < 10:
+        try:
+            d = json.loads(urllib.request.urlopen(url).read().decode())
+        except Exception:
+            break
+        for p in d.get("data", []):
+            if p.get("is_reply") or not p.get("text"):
+                continue
+            hooks.add(p["text"].split("\n")[0].strip())
+            ts = datetime.strptime(p["timestamp"], "%Y-%m-%dT%H:%M:%S%z").astimezone(JST)
+            if ts.strftime("%Y-%m-%d") == today:
+                today_count += 1
+        url = d.get("paging", {}).get("next")
+        pages += 1
+    return hooks, today_count
+
+
 def publish_tree(segments):
     prev = None
     ids = []
@@ -63,8 +90,20 @@ def save(name, obj):
     json.dump(obj, open(os.path.join(DIR, name), "w"), ensure_ascii=False, indent=1)
 
 
-def post_one(bank, state, cap):
-    """1ツリー投稿。成功でTrue。"""
+def hook_of(tree):
+    return tree["segments"][0].split("\n")[0].strip()
+
+
+def post_one(bank, state, cap, seen):
+    """1ツリー投稿。重複(seen)はスキップして次へ。成功でTrue、打ち切りでFalse。"""
+    # seen（直近投稿済みフック）に無いツリーを探す（最大バンク一周）
+    scan = 0
+    while hook_of(bank[state["idx"] % len(bank)]) in seen and scan < len(bank):
+        state["idx"] += 1
+        scan += 1
+    if scan >= len(bank):
+        print(f"[{ACCT}] 全ツリーが直近投稿済み。スキップ。")
+        return False
     tree = bank[state["idx"] % len(bank)]
     segs = list(tree["segments"])
     cta_every = CFG.get("cta_every", 1)
@@ -83,6 +122,7 @@ def post_one(bank, state, cap):
            "hook": segs[0][:40]}
     with open(os.path.join(DIR, CFG["log"]), "a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    seen.add(hook_of(tree))
     state["idx"] += 1
     state["count"] += 1
     save(CFG["state"], state)
@@ -104,19 +144,27 @@ def main():
         state["count"] = 0
     cap = CFG["cap"]
 
-    # キャッチアップ方式: GitHubの発火が間引かれても、この1回でその時点の不足分を
-    # まとめて投稿（数分間隔）。1回あたり batch 本まで、当日 cap まで。
+    # 重複防止＋当日上限: API実データから直近フックと当日投稿数を取得
+    seen, today_count = fetch_recent(48)
+    # 当日数はAPI実数と状態の大きい方を採用（Git状態が失われても過剰投稿しない）
+    state["count"] = max(state["count"], today_count)
+
+    # キャッチアップ方式: 1回あたり batch 本まで、当日 cap まで。
     batch = CFG.get("batch", 1)
     spacing = CFG.get("spacing", 240)  # 投稿間の待機秒
     remaining = cap - state["count"]
     n = min(batch, remaining)
     if n <= 0:
-        print(f"[{ACCT}] 本日の上限({cap})に到達済み。スキップ。")
+        print(f"[{ACCT}] 本日の上限({cap})に到達済み（実投稿{today_count}）。スキップ。")
         return
-    print(f"[{ACCT}] このランで最大{n}本投稿（本日 {state['count']}/{cap}）")
+    print(f"[{ACCT}] このランで最大{n}本投稿（本日 {state['count']}/{cap}, 直近投稿済み{len(seen)}種は回避）")
+    posted = 0
     for i in range(n):
         try:
-            post_one(bank, state, cap)
+            ok = post_one(bank, state, cap, seen)
+            if not ok:
+                break
+            posted += 1
         except Exception as e:
             print(f"[{ACCT}] 投稿失敗: {e}", file=sys.stderr)
             sys.exit(1)

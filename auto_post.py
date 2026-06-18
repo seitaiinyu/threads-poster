@@ -18,7 +18,7 @@ JST = timezone(timedelta(hours=9))
 CONFIG = {
     # アカウント1はリーチ制限からの回復のため少量・CTA控えめ
     # batch: 1回の起動で投稿する最大本数（キャッチアップ用） / spacing: 投稿間隔(秒)
-    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 7,  "from": "2026-06-11", "cta_every": 0, "batch": 7,  "spacing": 300},
+    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 7,  "from": "2026-06-11", "cta_every": 0, "batch": 5,  "spacing": 300},
     "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11", "cta_every": 4, "batch": 30, "spacing": 120},
 }
 

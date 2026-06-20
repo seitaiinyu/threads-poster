@@ -26,8 +26,18 @@ CTAS = [
 ]
 
 
+TOPIC = ["坐骨", "神経痛", "腰痛", "痛み", "しびれ", "痺れ", "筋肉", "姿勢", "ストレッチ",
+         "骨盤", "お尻", "股関節", "神経", "梨状筋", "ふくらはぎ", "太もも", "腰", "歩",
+         "座り", "寝", "反り腰", "猫背", "ほぐ", "ケア", "改善", "再発"]
+
+
 def clean(text):
     return text and not any(w in text for w in NG)
+
+
+def relevant(segs):
+    body = "".join(segs)
+    return sum(1 for k in TOPIC if k in body) >= 2
 
 
 def localize(t):
@@ -81,6 +91,8 @@ def main():
         if any(not clean(s) for s in segs):
             continue
         if any(len(s) < 8 or len(s) > 400 for s in segs):
+            continue
+        if len(segs[0]) < 14 or not relevant(segs):  # 雑談・短すぎる投稿を除外
             continue
         hook = segs[0].split("\n")[0].strip()
         if hook in existing:

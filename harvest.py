@@ -48,13 +48,28 @@ def views(mid):
     return 0
 
 
+# 外れフック基準：テーマ不在の煽り・中身ゼロ・スパム表現は候補から除外
+LOSER = ["むむ", "消える前に", "誰も言わない", "今から衝撃的", "いいですか？", "よく聞いて",
+         "ナイショ", "トップシークレット", "心して見", "気を悪くしないで", "ここだけの話"]
+
+
+def is_loser_hook(text):
+    hook = text.split("\n")[0]
+    if any(w in text for w in LOSER):
+        return True
+    if len(hook) < 8:  # 1行目が短すぎ＝テーマ不在
+        return True
+    return False
+
+
 def main():
     hp = os.path.join(DIR, HARVESTED)
     harvested = set(json.load(open(hp))) if os.path.exists(hp) else set()
     posts = fetch_posts(DAYS)
     posts = [p for p in posts if p.get("media_type") in ("TEXT_POST", "IMAGE")
-             and p.get("text") and p["id"] not in harvested]
-    print(f"[{ACCT}] 対象候補: {len(posts)}件（{DAYS}日間, 未改良）", flush=True)
+             and p.get("text") and p["id"] not in harvested
+             and not is_loser_hook(p["text"])]  # 当たりパターン基準：外れフックを除外
+    print(f"[{ACCT}] 対象候補: {len(posts)}件（{DAYS}日間, 未改良・外れフック除外）", flush=True)
 
     scored = []
     log = open(os.path.join(DIR, f"harvest_progress_{ACCT}.txt"), "w")

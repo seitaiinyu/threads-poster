@@ -94,16 +94,41 @@ def hook_of(tree):
     return tree["segments"][0].split("\n")[0].strip()
 
 
-def post_one(bank, state, cap, seen):
-    """1ツリー投稿。重複(seen)はスキップして次へ。成功でTrue、打ち切りでFalse。"""
-    # seen（直近投稿済みフック）に無いツリーを探す（最大バンク一周）
-    scan = 0
-    while hook_of(bank[state["idx"] % len(bank)]) in seen and scan < len(bank):
-        state["idx"] += 1
-        scan += 1
-    if scan >= len(bank):
+# 曜日(月=0〜日=6) → 投稿の型。金=動線。土=共感、日=事例。
+CATEGORY_BY_WEEKDAY = {
+    0: "empathy", 1: "education", 2: "case", 3: "personality",
+    4: "funnel", 5: "empathy", 6: "case",
+}
+
+
+def today_category():
+    wd = datetime.now(JST).weekday()
+    cat = CATEGORY_BY_WEEKDAY[wd]
+    # 回復期のアカウント1は動線(CTA)を出さない → 教育に振替
+    if ACCT == "diet" and cat == "funnel" and CFG.get("cta_every", 1) == 0:
+        cat = "education"
+    return cat
+
+
+def post_one(bank, state, cap, seen, target_cat):
+    """1ツリー投稿。今日の型(target_cat)を優先し、重複(seen)は回避。打ち切りでFalse。"""
+    n = len(bank)
+    # ① 今日の型 かつ 未投稿 を探す
+    pick = None
+    for off in range(n):
+        t = bank[(state["idx"] + off) % n]
+        if t.get("cat") == target_cat and hook_of(t) not in seen:
+            pick = (state["idx"] + off) % n; break
+    # ② 無ければ 型不問で未投稿
+    if pick is None:
+        for off in range(n):
+            t = bank[(state["idx"] + off) % n]
+            if hook_of(t) not in seen:
+                pick = (state["idx"] + off) % n; break
+    if pick is None:
         print(f"[{ACCT}] 全ツリーが直近投稿済み。スキップ。")
         return False
+    state["idx"] = pick
     tree = bank[state["idx"] % len(bank)]
     segs = list(tree["segments"])
     cta_every = CFG.get("cta_every", 1)
@@ -157,11 +182,12 @@ def main():
     if n <= 0:
         print(f"[{ACCT}] 本日の上限({cap})に到達済み（実投稿{today_count}）。スキップ。")
         return
-    print(f"[{ACCT}] このランで最大{n}本投稿（本日 {state['count']}/{cap}, 直近投稿済み{len(seen)}種は回避）")
+    cat = today_category()
+    print(f"[{ACCT}] このランで最大{n}本投稿（本日 {state['count']}/{cap}, 型={cat}, 直近{len(seen)}種回避）")
     posted = 0
     for i in range(n):
         try:
-            ok = post_one(bank, state, cap, seen)
+            ok = post_one(bank, state, cap, seen, cat)
             if not ok:
                 break
             posted += 1

@@ -19,7 +19,8 @@ CONFIG = {
     # アカウント1はリーチ制限からの回復のため少量・CTA控えめ
     # batch: 1回の起動で投稿する最大本数（キャッチアップ用） / spacing: 投稿間隔(秒)
     "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 7,  "from": "2026-06-11", "cta_every": 0, "batch": 5,  "spacing": 300},
-    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11", "cta_every": 4, "batch": 30, "spacing": 120},
+    # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け・CTA常時付き）
+    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11", "cta_every": 4, "batch": 30, "spacing": 120, "local_every": 3},
 }
 
 ACCT = os.environ.get("ACCOUNT", "diet")
@@ -110,15 +111,22 @@ def today_category():
     return cat
 
 
-def post_one(bank, state, cap, seen, target_cat):
-    """1ツリー投稿。今日の型(target_cat)を優先し、重複(seen)は回避。打ち切りでFalse。"""
+def post_one(bank, state, cap, seen, target_cat, want_local=False):
+    """1ツリー投稿。地域回(want_local)は地域投稿を優先、通常回は今日の型を優先。重複(seen)回避。"""
     n = len(bank)
-    # ① 今日の型 かつ 未投稿 を探す
     pick = None
-    for off in range(n):
-        t = bank[(state["idx"] + off) % n]
-        if t.get("cat") == target_cat and hook_of(t) not in seen:
-            pick = (state["idx"] + off) % n; break
+    # ⓪ 地域回: local=True かつ 未投稿 を最優先
+    if want_local:
+        for off in range(n):
+            t = bank[(state["idx"] + off) % n]
+            if t.get("local") and hook_of(t) not in seen:
+                pick = (state["idx"] + off) % n; break
+    # ① 今日の型 かつ 未投稿
+    if pick is None:
+        for off in range(n):
+            t = bank[(state["idx"] + off) % n]
+            if t.get("cat") == target_cat and hook_of(t) not in seen:
+                pick = (state["idx"] + off) % n; break
     # ② 無ければ 型不問で未投稿
     if pick is None:
         for off in range(n):
@@ -133,7 +141,9 @@ def post_one(bank, state, cap, seen, target_cat):
     segs = list(tree["segments"])
     cta_every = CFG.get("cta_every", 1)
     cta_turn = cta_every > 0 and (state["count"] % cta_every == 0)
-    if "cta" in tree:
+    if tree.get("local"):
+        pass  # 地域投稿は商圏向けコンバージョン投稿なのでCTAを常に維持
+    elif "cta" in tree:
         # 3部構成: ③は通常「まとめ」。CTA回は③をCTAに置換（常に3投稿）
         if cta_turn:
             segs = segs[:2] + [tree["cta"]]
@@ -184,10 +194,12 @@ def main():
         return
     cat = today_category()
     print(f"[{ACCT}] このランで最大{n}本投稿（本日 {state['count']}/{cap}, 型={cat}, 直近{len(seen)}種回避）")
+    local_every = CFG.get("local_every", 0)
     posted = 0
     for i in range(n):
+        want_local = local_every > 0 and (state["count"] % local_every == 1)
         try:
-            ok = post_one(bank, state, cap, seen, cat)
+            ok = post_one(bank, state, cap, seen, cat, want_local)
             if not ok:
                 break
             posted += 1

@@ -190,13 +190,24 @@ def main():
     # 当日数はAPI実数と状態の大きい方を採用（Git状態が失われても過剰投稿しない）
     state["count"] = max(state["count"], today_count)
 
-    # キャッチアップ方式: 1回あたり batch 本まで、当日 cap まで。
+    # ゴールデンタイム3分割: 現在時刻(JST)に応じて「その枠までの累計目標」まで投稿。
+    #   朝枠(〜昼) 1/3 / 夕枠(〜夜21時) 2/3 / 夜枠(22時〜) 全量
+    # → 定刻に発火すれば朝・夕・夜へ分散、発火が飛んでも後の枠でキャッチアップ。
+    import math
+    hour = datetime.now(JST).hour
+    if 6 <= hour < 12:
+        frac = 1 / 3
+    elif 12 <= hour < 22:
+        frac = 2 / 3
+    else:
+        frac = 1.0
+    target = math.ceil(cap * frac)
     batch = CFG.get("batch", 1)
     spacing = CFG.get("spacing", 240)  # 投稿間の待機秒
-    remaining = cap - state["count"]
+    remaining = min(target, cap) - state["count"]
     n = min(batch, remaining)
     if n <= 0:
-        print(f"[{ACCT}] 本日の上限({cap})に到達済み（実投稿{today_count}）。スキップ。")
+        print(f"[{ACCT}] 現時点の目標({target})に到達済み（実投稿{state['count']}）。スキップ。")
         return
     cat = today_category()
     print(f"[{ACCT}] このランで最大{n}本投稿（本日 {state['count']}/{cap}, 型={cat}, 直近{len(seen)}種回避）")

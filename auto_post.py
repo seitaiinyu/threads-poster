@@ -18,7 +18,7 @@ JST = timezone(timedelta(hours=9))
 CONFIG = {
     # アカウント1はリーチ制限からの回復のため少量・CTA控えめ
     # batch: 1回の起動で投稿する最大本数（キャッチアップ用） / spacing: 投稿間隔(秒)
-    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 7,  "from": "2026-06-11", "cta_every": 0, "batch": 5,  "spacing": 300},
+    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 7,  "from": "2026-06-11", "cta_every": 0, "batch": 5,  "spacing": 300, "local_every": 3},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
     "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11", "cta_every": 4, "batch": 30, "spacing": 120, "local_every": 4},
 }
@@ -142,8 +142,11 @@ def post_one(bank, state, cap, seen, target_cat, want_local=False):
     cta_every = CFG.get("cta_every", 1)
     cta_turn = cta_every > 0 and (state["count"] % cta_every == 0)
     if tree.get("local"):
-        # 地域投稿: 価値提供とのバランスを取り、CTAは2回に1回だけ残す
-        if len(segs) >= 2 and state["count"] % 2 == 1:
+        # 地域投稿: 最終段がCTA(プロフィール誘導)の場合のみ、2回に1回だけCTAを外す。
+        # CTAなしの地域投稿(回復期A1の純価値提供)はそのまま3段で出す。
+        last = segs[-1] if segs else ""
+        is_cta = "プロフィール" in last
+        if is_cta and len(segs) >= 2 and state["count"] % 2 == 1:
             segs = segs[:-1]
     elif "cta" in tree:
         # 3部構成: ③は通常「まとめ」。CTA回は③をCTAに置換（常に3投稿）

@@ -22,7 +22,7 @@ CONFIG = {
     # shindan_weekdays: 診断誘導を出す曜日(月=0)。火・金・日の週3本、各日その日の1本目に。
     "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 4,  "from": "2026-06-11", "cta_every": 0, "batch": 4,  "spacing": 600, "local_every": 2, "shindan_weekdays": [1, 4, 6]},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
-    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11", "cta_every": 4, "batch": 30, "spacing": 120, "local_every": 4},
+    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11", "cta_every": 4, "batch": 30, "spacing": 120, "local_every": 4, "disease_rotate": True},
 }
 
 ACCT = os.environ.get("ACCOUNT", "diet")
@@ -113,29 +113,37 @@ def today_category():
     return cat
 
 
-def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=False):
-    """1ツリー投稿。診断回>地域回>今日の型 の優先で選ぶ。重複(seen)回避。"""
+def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=False, want_disease=None):
+    """1ツリー投稿。診断回>地域回>疾患交互>今日の型 の優先で選ぶ。重複(seen)回避。"""
     n = len(bank)
     pick = None
+    def dz_ok(t):
+        return want_disease is None or t.get("disease") in (want_disease, "共通")
     # ⓪ 診断回: shindan=True かつ 未投稿 を最優先
     if want_shindan:
         for off in range(n):
             t = bank[(state["idx"] + off) % n]
             if t.get("shindan") and hook_of(t) not in seen:
                 pick = (state["idx"] + off) % n; break
-    # ① 地域回: local=True かつ 未投稿
+    # ① 地域回: local=True かつ 疾患一致 かつ 未投稿
     if pick is None and want_local:
         for off in range(n):
             t = bank[(state["idx"] + off) % n]
-            if t.get("local") and hook_of(t) not in seen:
+            if t.get("local") and dz_ok(t) and hook_of(t) not in seen:
                 pick = (state["idx"] + off) % n; break
-    # ① 今日の型 かつ 未投稿
+    # ② 疾患交互: 指定疾患に厳密一致 かつ 未投稿（共通は含めない＝均等に回すため）
+    if pick is None and want_disease is not None:
+        for off in range(n):
+            t = bank[(state["idx"] + off) % n]
+            if t.get("disease") == want_disease and hook_of(t) not in seen:
+                pick = (state["idx"] + off) % n; break
+    # ③ 今日の型 かつ 未投稿
     if pick is None:
         for off in range(n):
             t = bank[(state["idx"] + off) % n]
             if t.get("cat") == target_cat and hook_of(t) not in seen:
                 pick = (state["idx"] + off) % n; break
-    # ② 無ければ 型不問で未投稿
+    # ④ 無ければ 型不問で未投稿
     if pick is None:
         for off in range(n):
             t = bank[(state["idx"] + off) % n]
@@ -223,13 +231,18 @@ def main():
     local_every = CFG.get("local_every", 0)
     shindan_days = CFG.get("shindan_weekdays", [])
     is_shindan_day = datetime.now(JST).weekday() in shindan_days
+    disease_rotate = CFG.get("disease_rotate", False)
     posted = 0
     for i in range(n):
         want_local = local_every > 0 and (state["count"] % local_every == 1)
         # 診断誘導: 診断曜日の当日1本目のみ（週3本・低頻度）
         want_shindan = is_shindan_day and state["count"] == 0
+        # 疾患交互: 坐骨/腰痛を1本ごとに切替（尽きたら自動で他疾患に補完）
+        want_disease = None
+        if disease_rotate:
+            want_disease = "腰痛" if state["count"] % 2 == 0 else "坐骨"
         try:
-            ok = post_one(bank, state, cap, seen, cat, want_local, want_shindan)
+            ok = post_one(bank, state, cap, seen, cat, want_local, want_shindan, want_disease)
             if not ok:
                 break
             posted += 1

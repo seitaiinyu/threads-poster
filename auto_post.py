@@ -20,7 +20,9 @@ CONFIG = {
     # batch: 1回の起動で投稿する最大本数（キャッチアップ用） / spacing: 投稿間隔(秒)
     # 回復最優先: 1日4本の少量・質重視運用（正常な投稿頻度でスパム判定を回避）
     # shindan_weekdays: 診断誘導を出す曜日(月=0)。火・金・日の週3本、各日その日の1本目に。
-    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 4,  "from": "2026-06-11", "cta_every": 0, "batch": 4,  "spacing": 600, "local_every": 2, "shindan_weekdays": [1, 4, 6]},
+    # 【停止中】2026-07-18〜08-07 は完全停止（シャドウバンのリセット狙い）。
+    # from を 2026-08-08 にして自動再開。再開後は1日2本の慎重運用。
+    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 2,  "from": "2026-08-08", "cta_every": 0, "batch": 2,  "spacing": 900, "local_every": 2, "shindan_weekdays": []},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
     "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 30, "from": "2026-06-11", "cta_every": 4, "batch": 30, "spacing": 120, "local_every": 4, "disease_rotate": True},
 }

@@ -172,7 +172,7 @@ def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=
         # 3部構成: ③は通常「まとめ」。CTA回は③をCTAに置換（常に3投稿）
         if cta_turn:
             segs = segs[:2] + [tree["cta"]]
-    elif re.search(r"と(一言)?送", segs[-1]) and len(segs) >= 2:
+    elif re.search(r"「(腰痛|坐骨神経痛)」", segs[-1]) and len(segs) >= 2:
         # LINEプレゼント誘導は常に残す（バンク内で約3割に絞ってあるため過剰にならない）
         pass
     else:

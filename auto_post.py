@@ -6,7 +6,7 @@
 - 投稿ログを post_log_<acct>.jsonl、進捗を state_<acct>.json に記録
 - UID/TOKEN は環境変数 THREADS_USER_ID / THREADS_ACCESS_TOKEN（ワークフローが各アカウントのSecretを渡す）
 """
-import os, json, time, urllib.request, urllib.parse, sys
+import os, re, json, time, urllib.request, urllib.parse, sys
 from datetime import datetime, timezone, timedelta
 
 API = "https://graph.threads.net/v1.0"
@@ -172,6 +172,9 @@ def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=
         # 3部構成: ③は通常「まとめ」。CTA回は③をCTAに置換（常に3投稿）
         if cta_turn:
             segs = segs[:2] + [tree["cta"]]
+    elif re.search(r"と(一言)?送", segs[-1]) and len(segs) >= 2:
+        # LINEプレゼント誘導は常に残す（バンク内で約3割に絞ってあるため過剰にならない）
+        pass
     else:
         # 旧形式: CTAは最終段。非CTA回は外す
         if len(segs) >= 2 and (cta_every == 0 or (cta_every > 1 and not cta_turn)):

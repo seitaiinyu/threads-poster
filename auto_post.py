@@ -24,7 +24,7 @@ CONFIG = {
     # from を 2026-08-08 にして自動再開。再開後は1日2本の慎重運用。
     "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 2,  "from": "2026-08-08", "cta_every": 0, "batch": 2,  "spacing": 900, "local_every": 2, "shindan_weekdays": []},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
-    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 15, "from": "2026-06-11", "cta_every": 4, "batch": 15, "spacing": 300, "local_every": 4, "disease_rotate": True},
+    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 15, "from": "2026-06-11", "cta_every": 4, "batch": 6, "spacing": 300, "local_every": 4, "disease_rotate": True},
 }
 
 ACCT = os.environ.get("ACCOUNT", "diet")
@@ -214,13 +214,12 @@ def main():
     # → 定刻に発火すれば朝・夕・夜へ分散、発火が飛んでも後の枠でキャッチアップ。
     import math
     hour = datetime.now(JST).hour
-    # 実データ(14日)より: JST 18〜翌2時が最も表示が伸び、8時/14時/20時は壊滅的。
-    # → 夕方以降に配分を寄せる。昼までは投稿しない。
-    if hour < 15:
-        frac = 0.0
-    elif 15 <= hour < 19:
+    # 実データ(14日): 朝7時(中央1104)と19時〜翌2時が好調。8/14/20時の不調は
+    # 連投キャッチアップの副作用と見て、時間帯ではなく「間隔」で対処する。
+    # 通勤スマホ時間(朝)・帰宅後(夕)・就寝前(夜)の3枠に均等配分。
+    if 6 <= hour < 11:
         frac = 1 / 3
-    elif 19 <= hour < 22:
+    elif 11 <= hour < 21:
         frac = 2 / 3
     else:
         frac = 1.0

@@ -24,7 +24,7 @@ CONFIG = {
     # from を 2026-08-08 にして自動再開。再開後は1日2本の慎重運用。
     "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 2,  "from": "2026-08-08", "cta_every": 0, "batch": 2,  "spacing": 900, "local_every": 2, "shindan_weekdays": []},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
-    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 15, "from": "2026-06-11", "cta_every": 4, "batch": 6, "spacing": 300, "local_every": 4, "disease_rotate": True, "shindan_weekdays": [1, 4, 6]},
+    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 15, "from": "2026-06-11", "cta_every": 4, "batch": 6, "spacing": 300, "local_every": 4, "disease_rotate": True, "shindan_weekdays": [0,1,2,3,4,5,6], "shindan_slots": [0, 10]},
 }
 
 ACCT = os.environ.get("ACCOUNT", "diet")
@@ -243,8 +243,8 @@ def main():
     posted = 0
     for i in range(n):
         want_local = local_every > 0 and (state["count"] % local_every == 1)
-        # 診断誘導: 診断曜日の当日1本目のみ（週3本・低頻度）
-        want_shindan = is_shindan_day and state["count"] == 0
+        # 診断誘導: 指定スロット(朝枠の1本目=0, 夜枠の1本目=10)に1本ずつ＝1日2本
+        want_shindan = is_shindan_day and state["count"] in CFG.get("shindan_slots", [0])
         # 疾患交互: 坐骨/腰痛を1本ごとに切替（尽きたら自動で他疾患に補完）
         want_disease = None
         if disease_rotate:

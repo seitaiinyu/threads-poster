@@ -24,7 +24,7 @@ CONFIG = {
     # from を 2026-08-08 にして自動再開。再開後は1日2本の慎重運用。
     "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 2,  "from": "2026-08-08", "cta_every": 0, "batch": 2,  "spacing": 900, "local_every": 2, "shindan_weekdays": []},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
-    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 15, "from": "2026-06-11", "cta_every": 4, "batch": 6, "spacing": 300, "local_every": 4, "disease_rotate": True},
+    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 15, "from": "2026-06-11", "cta_every": 4, "batch": 6, "spacing": 300, "local_every": 4, "disease_rotate": True, "shindan_weekdays": [1, 4, 6]},
 }
 
 ACCT = os.environ.get("ACCOUNT", "diet")

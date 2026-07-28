@@ -24,7 +24,7 @@ CONFIG = {
     # from を 2026-08-08 にして自動再開。再開後は1日2本の慎重運用。
     "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 2,  "from": "2026-08-08", "cta_every": 0, "batch": 2,  "spacing": 900, "local_every": 2, "shindan_weekdays": []},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
-    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 15, "from": "2026-06-11", "cta_every": 4, "batch": 6, "spacing": 300, "local_every": 4, "disease_rotate": True, "shindan_weekdays": [0,1,2,3,4,5,6], "shindan_slots": [0, 10]},
+    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 15, "from": "2026-06-11", "cta_every": 4, "batch": 6, "spacing": 300, "local_every": 4, "disease_rotate": True, "shindan_weekdays": [0,1,2,3,4,5,6], "shindan_slots": [0, 7]},
 }
 
 ACCT = os.environ.get("ACCOUNT", "diet")
@@ -220,12 +220,18 @@ def main():
     # 実データ(14日): 朝7時(中央1104)と19時〜翌2時が好調。8/14/20時の不調は
     # 連投キャッチアップの副作用と見て、時間帯ではなく「間隔」で対処する。
     # 通勤スマホ時間(朝)・帰宅後(夕)・就寝前(夜)の3枠に均等配分。
-    if 6 <= hour < 11:
-        frac = 1 / 3
-    elif 11 <= hour < 21:
-        frac = 2 / 3
+    # 0時台は「新しい日の始まり」。ここで全量を許すと深夜に1日分を使い切るため、
+    # 深夜は少量に抑え、朝・昼・夜に向けて累計目標を段階的に上げる。
+    if hour < 6:
+        frac = 0.15          # 深夜0〜5時: 前日の取りこぼし分だけ
+    elif hour < 11:
+        frac = 0.45          # 朝(通勤): ここで診断①が出る
+    elif hour < 18:
+        frac = 0.65
+    elif hour < 22:
+        frac = 0.85          # 夕〜夜: ここで診断②が出る
     else:
-        frac = 1.0
+        frac = 1.0           # 22〜24時
     target = math.ceil(cap * frac)
     batch = CFG.get("batch", 1)
     spacing = CFG.get("spacing", 240)  # 投稿間の待機秒

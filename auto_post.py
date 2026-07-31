@@ -115,7 +115,7 @@ def today_category():
     return cat
 
 
-def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=False, want_disease=None):
+def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=False, want_disease=None, want_types=None):
     """1ツリー投稿。診断回>地域回>疾患交互>今日の型 の優先で選ぶ。重複(seen)回避。"""
     n = len(bank)
     pick = None
@@ -126,6 +126,12 @@ def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=
         for off in range(n):
             t = bank[(state["idx"] + off) % n]
             if t.get("shindan") and hook_of(t) not in seen:
+                pick = (state["idx"] + off) % n; break
+    # ⓪.5 朝の勝ちパターン枠: 指定typeかつ疾患一致かつ未投稿
+    if pick is None and want_types:
+        for off in range(n):
+            t = bank[(state["idx"] + off) % n]
+            if t.get("type") in want_types and dz_ok(t) and hook_of(t) not in seen:
                 pick = (state["idx"] + off) % n; break
     # ① 地域回: local=True かつ 疾患一致 かつ 未投稿
     if pick is None and want_local:
@@ -225,10 +231,12 @@ def main():
     # 実データ(14日): 1時914 / 2時843 / 19時856 / 0時610 / 23時572 が好調。
     # 8時48・14時44・20時46 は壊滅的なため、その枠には配信しない。
     # 1日は3時始まり(business_day)なので、深夜0-2時が「その日の最終枠」になる。
-    if 19 <= hour < 22:
-        frac = 0.35
+    if 6 <= hour < 10:
+        frac = 0.11         # 朝(通勤): 3本だけ。勝ちパターン型を優先配信
+    elif 19 <= hour < 22:
+        frac = 0.45
     elif 22 <= hour <= 23:
-        frac = 0.70
+        frac = 0.75
     elif hour < 3:
         frac = 1.0
     else:
@@ -256,8 +264,10 @@ def main():
         want_disease = None
         if disease_rotate:
             want_disease = "腰痛" if state["count"] % 2 == 0 else "坐骨"
+        # 朝枠は実データで伸びている型(意外な部位/不安名指し/9割断定)に限定
+        want_types = ("bui", "dantei", "winning") if 6 <= hour < 10 else None
         try:
-            ok = post_one(bank, state, cap, seen, cat, want_local, want_shindan, want_disease)
+            ok = post_one(bank, state, cap, seen, cat, want_local, want_shindan, want_disease, want_types)
             if not ok:
                 break
             posted += 1

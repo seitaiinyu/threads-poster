@@ -24,7 +24,7 @@ CONFIG = {
     # from を 2026-08-08 にして自動再開。再開後は1日2本の慎重運用。
     "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 2,  "from": "2026-08-08", "cta_every": 0, "batch": 2,  "spacing": 900, "local_every": 2, "shindan_weekdays": []},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
-    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 15, "from": "2026-06-11", "cta_every": 4, "batch": 6, "spacing": 300, "local_every": 4, "disease_rotate": True, "shindan_weekdays": [0,1,2,3,4,5,6], "shindan_slots": [0, 7]},
+    "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 28, "from": "2026-06-11", "cta_every": 4, "batch": 12, "spacing": 180, "local_every": 4, "disease_rotate": True, "shindan_weekdays": [0,1,2,3,4,5,6], "shindan_slots": [0, 14]},
 }
 
 ACCT = os.environ.get("ACCOUNT", "diet")
@@ -48,7 +48,7 @@ def fetch_recent(hours=48):
     url = (f"{API}/{UID}/threads?fields=text,timestamp,is_reply&since={since}"
            f"&limit=100&access_token=" + urllib.parse.quote(TOK))
     hooks = set()
-    today = datetime.now(JST).strftime("%Y-%m-%d")
+    today = business_day()
     today_count = 0
     pages = 0
     while url and pages < 10:
@@ -61,7 +61,7 @@ def fetch_recent(hours=48):
                 continue
             hooks.add(p["text"].split("\n")[0].strip())
             ts = datetime.strptime(p["timestamp"], "%Y-%m-%dT%H:%M:%S%z").astimezone(JST)
-            if ts.strftime("%Y-%m-%d") == today:
+            if (ts - timedelta(hours=3)).strftime("%Y-%m-%d") == today:
                 today_count += 1
         url = d.get("paging", {}).get("next")
         pages += 1
@@ -193,8 +193,13 @@ def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=
     return True
 
 
+def business_day():
+    """深夜0〜2時は前日の配信枠として扱う（3時始まりの1日）。"""
+    return (datetime.now(JST) - timedelta(hours=3)).strftime("%Y-%m-%d")
+
+
 def main():
-    today = datetime.now(JST).strftime("%Y-%m-%d")
+    today = business_day()
     if today < CFG["from"]:
         print(f"[{ACCT}] 稼働開始日({CFG['from']})前のためスキップ（本日 {today}）")
         return
@@ -220,18 +225,17 @@ def main():
     # 実データ(14日): 朝7時(中央1104)と19時〜翌2時が好調。8/14/20時の不調は
     # 連投キャッチアップの副作用と見て、時間帯ではなく「間隔」で対処する。
     # 通勤スマホ時間(朝)・帰宅後(夕)・就寝前(夜)の3枠に均等配分。
-    # 0時台は「新しい日の始まり」。ここで全量を許すと深夜に1日分を使い切るため、
-    # 深夜は少量に抑え、朝・昼・夜に向けて累計目標を段階的に上げる。
-    if hour < 6:
-        frac = 0.15          # 深夜0〜5時: 前日の取りこぼし分だけ
-    elif hour < 11:
-        frac = 0.45          # 朝(通勤): ここで診断①が出る
-    elif hour < 18:
-        frac = 0.65
-    elif hour < 22:
-        frac = 0.85          # 夕〜夜: ここで診断②が出る
+    # 実データ(14日): 1時914 / 2時843 / 19時856 / 0時610 / 23時572 が好調。
+    # 8時48・14時44・20時46 は壊滅的なため、その枠には配信しない。
+    # 1日は3時始まり(business_day)なので、深夜0-2時が「その日の最終枠」になる。
+    if 19 <= hour < 22:
+        frac = 0.35
+    elif 22 <= hour <= 23:
+        frac = 0.70
+    elif hour < 3:
+        frac = 1.0
     else:
-        frac = 1.0           # 22〜24時
+        frac = 0.0
     target = math.ceil(cap * frac)
     batch = CFG.get("batch", 1)
     spacing = CFG.get("spacing", 240)  # 投稿間の待機秒

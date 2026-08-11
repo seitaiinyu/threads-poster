@@ -210,6 +210,8 @@ def main():
         print(f"[{ACCT}] 稼働開始日({CFG['from']})前のためスキップ（本日 {today}）")
         return
     bank = load(CFG["bank"], [])
+    # 季節限定投稿(until)の期限切れを除外
+    bank = [t for t in bank if not t.get("until") or today <= t["until"]]
     if not bank:
         print(f"[{ACCT}] バンクが空です"); return
     state = load(CFG["state"], {"idx": 0, "day": "", "count": 0})
@@ -231,7 +233,25 @@ def main():
     # 実データ(14日): 1時914 / 2時843 / 19時856 / 0時610 / 23時572 が好調。
     # 8時48・14時44・20時46 は壊滅的なため、その枠には配信しない。
     # 1日は3時始まり(business_day)なので、深夜0-2時が「その日の最終枠」になる。
-    if 6 <= hour < 10:
+    obon = ACCT == "yu" and "2026-08-11" <= today <= "2026-08-17"
+    if obon:
+        # お盆特別配分: 在宅・帰省で日中もスマホ時間が増えるため、日中枠を開放
+        cap = max(cap, 32)
+        if 6 <= hour < 10:
+            frac = 0.12
+        elif 10 <= hour < 14:
+            frac = 0.30
+        elif 14 <= hour < 19:
+            frac = 0.50
+        elif 19 <= hour < 22:
+            frac = 0.70
+        elif 22 <= hour <= 23:
+            frac = 0.85
+        elif hour < 3:
+            frac = 1.0
+        else:
+            frac = 0.0
+    elif 6 <= hour < 10:
         frac = 0.11         # 朝(通勤): 3本だけ。勝ちパターン型を優先配信
     elif 19 <= hour < 22:
         frac = 0.45

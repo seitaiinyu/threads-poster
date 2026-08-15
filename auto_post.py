@@ -22,7 +22,7 @@ CONFIG = {
     # shindan_weekdays: 診断誘導を出す曜日(月=0)。火・金・日の週3本、各日その日の1本目に。
     # 【停止中】2026-07-18〜08-07 は完全停止（シャドウバンのリセット狙い）。
     # from を 2026-08-08 にして自動再開。再開後は1日2本の慎重運用。
-    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 2,  "from": "2026-08-08", "cta_every": 0, "batch": 2,  "spacing": 900, "local_every": 2, "shindan_weekdays": []},
+    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 3,  "from": "2026-08-08", "cta_every": 0, "batch": 3,  "spacing": 900, "local_every": 4, "dedup_hours": 168, "shindan_weekdays": []},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
     "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 28, "from": "2026-06-11", "cta_every": 4, "batch": 12, "spacing": 180, "local_every": 4, "disease_rotate": True, "shindan_weekdays": [0,1,2,3,4,5,6], "shindan_slots": [0, 14]},
 }
@@ -221,7 +221,7 @@ def main():
     cap = CFG["cap"]
 
     # 重複防止＋当日上限: API実データから直近フックと当日投稿数を取得
-    seen, today_count = fetch_recent(48)
+    seen, today_count = fetch_recent(CFG.get("dedup_hours", 48))
     # 当日数はAPI実数と状態の大きい方を採用（Git状態が失われても過剰投稿しない）
     state["count"] = max(state["count"], today_count)
 

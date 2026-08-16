@@ -233,6 +233,23 @@ def main():
     # 実データ(14日): 1時914 / 2時843 / 19時856 / 0時610 / 23時572 が好調。
     # 8時48・14時44・20時46 は壊滅的なため、その枠には配信しない。
     # 1日は3時始まり(business_day)なので、深夜0-2時が「その日の最終枠」になる。
+    # A1(回復期): 実データで朝(368〜2802)が夜(105〜232)の3〜10倍 → 3本中2本を朝に。
+    if ACCT == "diet":
+        if 6 <= hour < 10:
+            frac = 0.67          # 朝2本
+        elif 18 <= hour <= 23:
+            frac = 1.0           # 夜1本
+        else:
+            frac = 0.0
+        target = math.ceil(cap * frac)
+        batch = CFG.get("batch", 1)
+        spacing = CFG.get("spacing", 240)
+        remaining = min(target, cap) - state["count"]
+        n = min(batch, remaining)
+        if n <= 0:
+            print(f"[{ACCT}] 現時点の目標({target})に到達済み（実投稿{state['count']}）。スキップ。")
+            return
+        return run_batch(bank, state, cap, seen, n, spacing)
     obon = ACCT == "yu" and "2026-08-11" <= today <= "2026-08-17"
     if obon:
         # お盆特別配分: 在宅・帰省で日中もスマホ時間が増えるため、日中枠を開放
@@ -269,6 +286,11 @@ def main():
     if n <= 0:
         print(f"[{ACCT}] 現時点の目標({target})に到達済み（実投稿{state['count']}）。スキップ。")
         return
+    return run_batch(bank, state, cap, seen, n, spacing)
+
+
+def run_batch(bank, state, cap, seen, n, spacing):
+    hour = datetime.now(JST).hour
     cat = today_category()
     print(f"[{ACCT}] このランで最大{n}本投稿（本日 {state['count']}/{cap}, 型={cat}, 直近{len(seen)}種回避）")
     local_every = CFG.get("local_every", 0)

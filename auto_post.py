@@ -235,13 +235,16 @@ def main():
     # 1日は3時始まり(business_day)なので、深夜0-2時が「その日の最終枠」になる。
     # A1(回復期): 実データで朝(368〜2802)が夜(105〜232)の3〜10倍 → 3本中2本を朝に。
     if ACCT == "diet":
-        if 6 <= hour < 10:
-            frac = 0.67          # 朝2本
-        elif 18 <= hour <= 23:
-            frac = 1.0           # 夜1本
+        # 端数計算(ceil(3*0.67)=3)で朝3本になるバグ→本数を明示。
+        # GH発火の大幅遅延でウィンドウ外に着地→全スキップになる問題→枠を広げて必ず追いつく。
+        if 6 <= hour < 12:
+            target = 2           # 朝枠(遅延しても昼までに2本)
+        elif 12 <= hour <= 23:
+            target = cap         # 午後〜夜(遅延しても残り全部)
+        elif hour < 3:
+            target = cap         # 深夜0-2時は前日の最終キャッチアップ
         else:
-            frac = 0.0
-        target = math.ceil(cap * frac)
+            target = 0
         batch = CFG.get("batch", 1)
         spacing = CFG.get("spacing", 240)
         remaining = min(target, cap) - state["count"]

@@ -1,0 +1,29 @@
+name: 投稿停止の監視（両アカウント）
+on:
+  schedule:
+    # UTC 4:30 = JST 13:30（朝枠の確認） / UTC 13:30 = JST 22:30（1日の確認）
+    - cron: "30 4,13 * * *"
+  workflow_dispatch:
+jobs:
+  check-diet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: アカウント1の投稿数チェック
+        env:
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          ACCOUNT: diet
+          MIN_POSTS: 1
+        run: python3 watchdog.py
+  check-yu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: アカウント2の投稿数チェック
+        env:
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID_YU }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN_YU }}
+          ACCOUNT: yu
+          MIN_POSTS: 3
+        run: python3 watchdog.py

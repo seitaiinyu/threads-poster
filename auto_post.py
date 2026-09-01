@@ -294,6 +294,7 @@ def main():
 
 def run_batch(bank, state, cap, seen, n, spacing):
     hour = datetime.now(JST).hour
+    today = business_day()
     cat = today_category()
     print(f"[{ACCT}] このランで最大{n}本投稿（本日 {state['count']}/{cap}, 型={cat}, 直近{len(seen)}種回避）")
     local_every = CFG.get("local_every", 0)
@@ -302,7 +303,13 @@ def run_batch(bank, state, cap, seen, n, spacing):
     disease_rotate = CFG.get("disease_rotate", False)
     posted = 0
     for i in range(n):
-        want_local = local_every > 0 and (state["count"] % local_every == 1)
+        if ACCT == "diet":
+            # A1: 地域投稿は表示が伸びないため朝のゴールデン枠を使わせず、1日の最終投稿(夜)に限定。
+            # 頻度も local_every 日に1回に抑える（毎日は出さない）。
+            day_num = int(today.replace("-", ""))
+            want_local = local_every > 0 and state["count"] == cap - 1 and day_num % 2 == 0
+        else:
+            want_local = local_every > 0 and (state["count"] % local_every == 1)
         # 診断誘導: 指定スロット(朝枠の1本目=0, 夜枠の1本目=10)に1本ずつ＝1日2本
         want_shindan = is_shindan_day and state["count"] in CFG.get("shindan_slots", [0])
         # 疾患交互: 坐骨/腰痛を1本ごとに切替（尽きたら自動で他疾患に補完）

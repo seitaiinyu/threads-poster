@@ -14,7 +14,7 @@ jobs:
           THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           ACCOUNT: diet
-          MIN_POSTS: 1
+          MIN_POSTS: 2
         run: python3 watchdog.py
   check-yu:
     runs-on: ubuntu-latest

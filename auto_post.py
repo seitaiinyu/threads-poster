@@ -317,7 +317,11 @@ def run_batch(bank, state, cap, seen, n, spacing):
         if disease_rotate:
             want_disease = "腰痛" if state["count"] % 2 == 0 else "坐骨"
         # 朝枠は実データで伸びている型(意外な部位/不安名指し/9割断定)に限定
-        want_types = ("bui", "dantei", "winning") if 6 <= hour < 10 else None
+        if ACCT == "diet":
+            # A1: 朝のゴールデン枠は意外性型(igai/bui/live)を最優先
+            want_types = ("igai", "bui", "live") if 6 <= hour < 12 else None
+        else:
+            want_types = ("bui", "dantei", "winning") if 6 <= hour < 10 else None
         try:
             ok = post_one(bank, state, cap, seen, cat, want_local, want_shindan, want_disease, want_types)
             if not ok:

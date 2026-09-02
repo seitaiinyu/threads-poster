@@ -10,7 +10,7 @@ Q = urllib.parse.quote(os.environ["THREADS_ACCESS_TOKEN"])
 MIN = int(os.environ.get("MIN_POSTS", "1"))
 ACCT = os.environ.get("ACCOUNT", "?")
 d = json.loads(urllib.request.urlopen(
-    f"{API}/{UID}/threads?fields=timestamp,is_reply&since={int(time.time())-86400}&limit=100&access_token=" + Q,
+    f"{API}/{UID}/threads?fields=text,timestamp,is_reply&since={int(time.time())-86400}&limit=100&access_token=" + Q,
     timeout=30).read())
 today = datetime.now(JST).strftime("%Y-%m-%d")
 n = sum(1 for p in d.get("data", [])
@@ -19,4 +19,10 @@ n = sum(1 for p in d.get("data", [])
 print(f"[{ACCT}] 本日の投稿 {n}本 (基準 {MIN}本)")
 if n < MIN:
     print(f"[{ACCT}] ⚠️ 投稿が止まっています！", file=sys.stderr)
+    sys.exit(1)
+# 正体不明の外部ツールによるスパム投稿(「むむ！」等)の再発検知
+spam = [p for p in d.get("data", [])
+        if not p.get("is_reply") and (p.get("text") or "").startswith("むむ！")]
+if spam:
+    print(f"[{ACCT}] ⚠️ 外部ツールのスパム投稿を検知({len(spam)}件)！停止できていません。", file=sys.stderr)
     sys.exit(1)

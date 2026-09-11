@@ -13,3 +13,4 @@ posts_yu_30d.json
 *_rows.json
 *_result.txt
 __pycache__/
+.env.gh

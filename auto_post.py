@@ -272,11 +272,11 @@ def main():
         else:
             frac = 0.0
     elif 6 <= hour < 10:
-        frac = 0.11         # 朝(通勤): 3本だけ。勝ちパターン型を優先配信
+        frac = 0.32         # 朝(通勤): 実データで7時中央2091=最強。約9本を配分
     elif 19 <= hour < 22:
-        frac = 0.45
+        frac = 0.55         # 19-21時は弱め(中央259-392)なので控えめに
     elif 22 <= hour <= 23:
-        frac = 0.75
+        frac = 0.80
     elif hour < 3:
         frac = 1.0
     else:

@@ -255,6 +255,43 @@ def main():
             print(f"[{ACCT}] 現時点の目標({target})に到達済み（実投稿{state['count']}）。スキップ。")
             return
         return run_batch(bank, state, cap, seen, n, spacing)
+    holiday = "2026-09-19" <= today <= "2026-09-23"  # シルバーウィーク(9/24に自動終了)
+    if holiday and ACCT == "diet":
+        # A1: 5本のまま日中に再配分(朝3→昼までに4→夜5)
+        if 5 <= hour < 12:
+            target = 3
+        elif 12 <= hour < 17:
+            target = 4
+        elif 17 <= hour <= 23:
+            target = cap
+        elif hour < 3:
+            target = cap
+        else:
+            target = 0
+        return run_batch(bank, state, cap, seen, min(CFG.get("batch",1), min(target,cap)-state["count"]), CFG.get("spacing",240)) if min(target,cap)-state["count"]>0 else print(f"[{ACCT}] 連休配分: 目標到達済み")
+    if holiday and ACCT == "yu":
+        cap = max(cap, 32)
+        if 6 <= hour < 10:
+            frac = 0.30
+        elif 10 <= hour < 14:
+            frac = 0.45
+        elif 14 <= hour < 19:
+            frac = 0.60
+        elif 19 <= hour < 22:
+            frac = 0.75
+        elif 22 <= hour <= 23:
+            frac = 0.88
+        elif hour < 3:
+            frac = 1.0
+        else:
+            frac = 0.0
+        target = math.ceil(cap * frac)
+        batch = CFG.get("batch", 1); spacing = CFG.get("spacing", 240)
+        remaining = min(target, cap) - state["count"]
+        n = min(batch, remaining)
+        if n <= 0:
+            print(f"[{ACCT}] 連休配分: 目標({target})到達済み"); return
+        return run_batch(bank, state, cap, seen, n, spacing)
     obon = ACCT == "yu" and "2026-08-11" <= today <= "2026-08-17"
     if obon:
         # お盆特別配分: 在宅・帰省で日中もスマホ時間が増えるため、日中枠を開放

@@ -212,6 +212,9 @@ def main():
     bank = load(CFG["bank"], [])
     # 季節限定投稿(until)の期限切れを除外
     bank = [t for t in bank if not t.get("until") or today <= t["until"]]
+    # 曜日限定投稿(wd: 月=0〜日=6)は該当曜日のみ配信対象(例: 週末ネタは金土日だけ)
+    wd_now = datetime.now(JST).weekday()
+    bank = [t for t in bank if not t.get("wd") or wd_now in t["wd"]]
     if not bank:
         print(f"[{ACCT}] バンクが空です"); return
     state = load(CFG["state"], {"idx": 0, "day": "", "count": 0})

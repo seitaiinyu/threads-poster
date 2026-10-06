@@ -3,8 +3,6 @@ name: 勝ちネタ発掘（アカウント1 ダイエット）
 # 週1（毎週月曜 JST 9:10 = UTC 日曜 0:10）に過去投稿を閲覧数でランキングし
 # candidates_diet.json を更新（改良済みは harvested_diet.json で除外＝重複防止）
 on:
-  schedule:
-    - cron: "10 0 * * 1"
   workflow_dispatch: {}
 
 permissions:

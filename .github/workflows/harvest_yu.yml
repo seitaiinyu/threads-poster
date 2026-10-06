@@ -3,8 +3,6 @@ name: 勝ちネタ発掘（アカウント2 坐骨）
 # 週1（毎週月曜 JST 9:00 = UTC 日曜 0:00）に過去投稿を閲覧数でランキングし
 # candidates_yu.json を更新（改良済みは harvested_yu.json で除外＝重複防止）
 on:
-  schedule:
-    - cron: "0 0 * * 1"
   workflow_dispatch: {}
 
 permissions:

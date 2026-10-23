@@ -250,7 +250,7 @@ def main():
             target = cap         # 深夜0-2時は前日の最終キャッチアップ
         else:
             target = 0
-        batch = CFG.get("batch", 1)
+        batch = int(os.environ.get("BATCH", CFG.get("batch", 1)))
         spacing = CFG.get("spacing", 240)
         remaining = min(target, cap) - state["count"]
         n = min(batch, remaining)
@@ -289,7 +289,7 @@ def main():
         else:
             frac = 0.0
         target = math.ceil(cap * frac)
-        batch = CFG.get("batch", 1); spacing = CFG.get("spacing", 240)
+        batch = int(os.environ.get("BATCH", CFG.get("batch", 1))); spacing = CFG.get("spacing", 240)
         remaining = min(target, cap) - state["count"]
         n = min(batch, remaining)
         if n <= 0:
@@ -324,7 +324,7 @@ def main():
     else:
         frac = 0.0
     target = math.ceil(cap * frac)
-    batch = CFG.get("batch", 1)
+    batch = int(os.environ.get("BATCH", CFG.get("batch", 1)))
     spacing = CFG.get("spacing", 240)  # 投稿間の待機秒
     remaining = min(target, cap) - state["count"]
     n = min(batch, remaining)

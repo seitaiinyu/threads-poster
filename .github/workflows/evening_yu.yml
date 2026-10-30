@@ -1,14 +1,15 @@
 name: 夜枠の確実投稿（アカウント2 坐骨）
 
 # GitHubの定時実行は19〜23時に間引かれやすいため、夕方に1回起動して
-# 23:45まで15分おきに投稿し続ける。起動候補は JST 17:05〜18:35 の4回。
+# 23:45まで15分おきに投稿し続ける。起動候補は JST 12:05〜18:35(遅延込みで夜までに立ち上がる)。6h上限が近づくと自分を再起動して引き継ぐ。
 on:
   schedule:
-    - cron: "5,35 8,9 * * *"
+    - cron: "5,35 3,4,5,6,7,8,9 * * *"
   workflow_dispatch: {}
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: threads-evening-yu
@@ -24,11 +25,12 @@ jobs:
         with:
           python-version: "3.11"
       - name: 夜枠を15分おきに投稿
+        run: ./evening_loop.sh
         env:
           ACCOUNT: "yu"
           THREADS_USER_ID: ${{ secrets.THREADS_USER_ID_YU }}
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN_YU }}
-        run: ./evening_loop.sh
+          GH_TOKEN: ${{ github.token }}
       - name: 状態を保存
         if: always()
         run: |

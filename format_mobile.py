@@ -58,13 +58,25 @@ def paragraphs(lines):
     ・箇条書き(・①など)はまとめて1段落。箇条書きの前後では段落を切る
     ・3行を超えたら文末でなくても切る"""
     CHAIN = ("→", "＝")  # 前の行に続く連結記号。段落を割らない
+    TERM = re.compile(r"([。！？!?…]|\d+\s*(回|秒|分|セット|kg|g))$")
+
+    # 各行が「箇条書きの一部」かを判定（・で始まる行と、その折り返し行）
+    listish = []
+    for i, l in enumerate(lines):
+        if is_list(l):
+            listish.append(True)
+        elif i > 0 and listish[-1] and not TERM.search(lines[i - 1]):
+            listish.append(True)   # 前の箇条書きが文末で終わっていない＝折り返し
+        else:
+            listish.append(False)
+
     out, para = [], []
     for i, l in enumerate(lines):
         nxt = lines[i + 1] if i + 1 < len(lines) else None
-        if para and is_list(l) != is_list(para[-1]) and not l.startswith(CHAIN):
+        if para and listish[i] != listish[i - 1] and not l.startswith(CHAIN):
             out.append(para); para = []
         para.append(l)
-        if is_list(l) or (nxt is not None and nxt.startswith(CHAIN)):
+        if listish[i] or (nxt is not None and nxt.startswith(CHAIN)):
             continue
         ends = l.endswith(("。", "！", "？", "!", "?", "…"))
         if (ends and len(para) >= 2) or len(para) >= PARA_MAX:

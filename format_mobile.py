@@ -79,7 +79,8 @@ def paragraphs(lines):
         if listish[i] or (nxt is not None and nxt.startswith(CHAIN)):
             continue
         ends = l.endswith(("。", "！", "？", "!", "?", "…"))
-        if (ends and len(para) >= 2) or len(para) >= PARA_MAX:
+        # 文末でのみ区切る。長い文が続く場合も5行までは1段落にまとめる
+        if (ends and len(para) >= 2) or len(para) >= 5:
             out.append(para); para = []
     if para:
         out.append(para)

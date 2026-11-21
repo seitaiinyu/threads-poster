@@ -68,16 +68,29 @@ def fetch_recent(hours=48):
     return hooks, today_count
 
 
-def publish_tree(segments):
+IMAGE_BASE = "https://raw.githubusercontent.com/seitaiinyu/threads-poster/main/images/"
+
+
+def publish_tree(segments, image=None):
+    """ツリー投稿。image が指定されていれば1投稿目を画像つき(IMAGE)にする。
+    画像はリポジトリ(public)の images/ に置いたファイル名で指定する。"""
     prev = None
     ids = []
-    for text in segments:
-        p = {"media_type": "TEXT", "text": text}
+    for i, text in enumerate(segments):
+        if i == 0 and image:
+            p = {"media_type": "IMAGE", "image_url": IMAGE_BASE + image, "text": text}
+        else:
+            p = {"media_type": "TEXT", "text": text}
         if prev:
             p["reply_to_id"] = prev
         cid = post(f"{UID}/threads", p)["id"]
-        time.sleep(2)
-        pid = post(f"{UID}/threads_publish", {"creation_id": cid})["id"]
+        # 画像は取り込みに数秒かかるため少し長めに待つ。失敗時は1回だけ再試行
+        time.sleep(8 if (i == 0 and image) else 2)
+        try:
+            pid = post(f"{UID}/threads_publish", {"creation_id": cid})["id"]
+        except Exception:
+            time.sleep(10)
+            pid = post(f"{UID}/threads_publish", {"creation_id": cid})["id"]
         ids.append(pid)
         prev = pid
         time.sleep(2)
@@ -185,7 +198,7 @@ def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=
         # 旧形式: CTAは最終段。非CTA回は外す
         if len(segs) >= 2 and (cta_every == 0 or (cta_every > 1 and not cta_turn)):
             segs = segs[:-1]
-    ids = publish_tree(segs)
+    ids = publish_tree(segs, tree.get("image"))
     rec = {"ts": datetime.now(JST).isoformat(), "bank_idx": state["idx"] % len(bank),
            "type": tree.get("type"), "post_ids": ids, "first_id": ids[0],
            "hook": segs[0][:40]}

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""draft_yt_yu2.json（本人のYouTube動画9本由来・続きを読ませる4段ツリー）をA2バンクへ追加。
+"""draft_yt_yu3.json（本人のYouTube動画9本由来・続きを読ませる4段ツリー）をA2バンクへ追加。
 type=yt は朝の優先枠(bui/dantei/winning)に加える。"""
 import json, os, re
 DIR = os.path.dirname(os.path.abspath(__file__))
-BAN = re.compile(r"しましょう|すべき|ではありません|存在しません|http|lin\.ee|必ず治|100%|方へ")
+BAN = re.compile(r"太ももが痩せにくい|しましょう|すべき|ではありません|存在しません|http|lin\.ee|必ず治|100%|方へ")
 
 
 def main():
-    draft = json.load(open(os.path.join(DIR, "draft_yt_yu2.json"), encoding="utf-8"))
+    draft = json.load(open(os.path.join(DIR, "draft_yt_yu3.json"), encoding="utf-8"))
     p = os.path.join(DIR, "content_bank_yu.json")
     bank = json.load(open(p, encoding="utf-8"))
     ex = {t["segments"][0].split("\n")[0].strip() for t in bank}

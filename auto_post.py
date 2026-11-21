@@ -361,7 +361,7 @@ def run_batch(bank, state, cap, seen, n, spacing):
             # A1: 朝のゴールデン枠は意外性型(igai/bui/live)を最優先
             want_types = ("igai", "bui", "live", "rapport") if 5 <= hour < 12 else None
         else:
-            want_types = ("bui", "dantei", "winning") if 6 <= hour < 10 else None
+            want_types = ("yt", "bui", "dantei", "winning") if 6 <= hour < 10 else None
         try:
             ok = post_one(bank, state, cap, seen, cat, want_local, want_shindan, want_disease, want_types)
             if not ok:

@@ -49,12 +49,37 @@ def split_long(line):
     return result
 
 
+PARA_MAX = 3  # 1段落の最大行数
+
+
+def paragraphs(lines):
+    """行の並びを2〜3行の段落に分け、段落間に空行を入れる。
+    ・文末(。！？)で段落を閉じる
+    ・箇条書き(・①など)はまとめて1段落。箇条書きの前後では段落を切る
+    ・3行を超えたら文末でなくても切る"""
+    CHAIN = ("→", "＝")  # 前の行に続く連結記号。段落を割らない
+    out, para = [], []
+    for i, l in enumerate(lines):
+        nxt = lines[i + 1] if i + 1 < len(lines) else None
+        if para and is_list(l) != is_list(para[-1]) and not l.startswith(CHAIN):
+            out.append(para); para = []
+        para.append(l)
+        if is_list(l) or (nxt is not None and nxt.startswith(CHAIN)):
+            continue
+        ends = l.endswith(("。", "！", "？", "!", "?", "…"))
+        if (ends and len(para) >= 2) or len(para) >= PARA_MAX:
+            out.append(para); para = []
+    if para:
+        out.append(para)
+    return out
+
+
 def fmt(seg):
     lines = [l.strip() for l in seg.split("\n") if l.strip() != ""]
     result = []
     for l in lines:
         result.extend(split_long(l))
-    return "\n".join(result).strip()
+    return "\n\n".join("\n".join(p) for p in paragraphs(result)).strip()
 
 
 def main():

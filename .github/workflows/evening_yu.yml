@@ -1,4 +1,4 @@
-name: 夜枠の確実投稿（アカウント2 坐骨）
+name: 夜枠の確実投稿（両アカウント）
 
 # GitHubの定時実行は19〜23時に間引かれやすいため、夕方に1回起動して
 # 23:45まで15分おきに投稿し続ける。起動候補は JST 12:05〜18:35(遅延込みで夜までに立ち上がる)。6h上限が近づくと自分を再起動して引き継ぐ。
@@ -31,12 +31,14 @@ jobs:
           THREADS_USER_ID: ${{ secrets.THREADS_USER_ID_YU }}
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN_YU }}
           GH_TOKEN: ${{ github.token }}
+          DIET_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          DIET_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
       - name: 状態を保存
         if: always()
         run: |
           git config user.name "threads-bot"
           git config user.email "bot@users.noreply.github.com"
           git pull --no-edit --rebase || true
-          git add state_yu.json post_log_yu.jsonl || true
+          git add state.json post_log.jsonl state_yu.json post_log_yu.jsonl || true
           git commit -m "auto: アカウント2 夜枠ログ更新 [skip ci]" || echo "変更なし"
           git push || echo "push不要"

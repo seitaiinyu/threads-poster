@@ -17,5 +17,9 @@ while true; do
   fi
   echo "=== JST ${H}:${M} ==="
   BATCH=2 python3 auto_post.py || echo "今回は失敗、次回に再試行"
+  if [ -n "$DIET_USER_ID" ]; then
+    echo "--- アカウント1 ---"
+    ACCOUNT=diet THREADS_USER_ID="$DIET_USER_ID" THREADS_ACCESS_TOKEN="$DIET_TOKEN" BATCH=1 python3 auto_post.py || echo "A1は今回失敗、次回に再試行"
+  fi
   sleep 900
 done

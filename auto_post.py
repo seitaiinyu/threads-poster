@@ -22,7 +22,7 @@ CONFIG = {
     # shindan_weekdays: 診断誘導を出す曜日(月=0)。火・金・日の週3本、各日その日の1本目に。
     # 【停止中】2026-07-18〜08-07 は完全停止（シャドウバンのリセット狙い）。
     # from を 2026-08-08 にして自動再開。再開後は1日2本の慎重運用。
-    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 5,  "from": "2026-08-08", "cta_every": 0, "batch": 3,  "spacing": 900, "local_every": 4, "dedup_hours": 168, "shindan_weekdays": [1, 4, 6]},
+    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 5,  "from": "2026-08-08", "cta_every": 0, "batch": 3,  "spacing": 900, "local_every": 4, "dedup_hours": 168, "shindan_weekdays": [1, 4, 6], "image_ab": True},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
     "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 28, "from": "2026-06-11", "cta_every": 4, "batch": 12, "spacing": 180, "local_every": 4, "disease_rotate": True, "shindan_weekdays": [0,1,2,3,4,5,6], "shindan_slots": [0, 14], "dedup_hours": 168},
 }
@@ -198,10 +198,15 @@ def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=
         # 旧形式: CTAは最終段。非CTA回は外す
         if len(segs) >= 2 and (cta_every == 0 or (cta_every > 1 and not cta_turn)):
             segs = segs[:-1]
-    ids = publish_tree(segs, tree.get("image"))
+    # 画像A/Bテスト: 同じ事例文を「画像あり」「文字のみ」で交互に出し、表示数を比べる（image_used に記録）
+    image = tree.get("image")
+    if image and CFG.get("image_ab"):
+        image = image if (state["idx"] % 2 == 0) else None
+    ids = publish_tree(segs, image)
     rec = {"ts": datetime.now(JST).isoformat(), "bank_idx": state["idx"] % len(bank),
            "type": tree.get("type"), "post_ids": ids, "first_id": ids[0],
-           "hook": segs[0][:40]}
+           "hook": segs[0][:40], "image_used": bool(image)}
+    state["last_type"] = tree.get("type")
     with open(os.path.join(DIR, CFG["log"]), "a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     seen.add(hook_of(tree))
@@ -373,6 +378,9 @@ def run_batch(bank, state, cap, seen, n, spacing):
         if ACCT == "diet":
             # A1: 朝のゴールデン枠は意外性型(igai/bui/live)を最優先
             want_types = ("case2", "ninchi", "hanten", "jisseki", "igai", "bui", "live", "rapport") if 5 <= hour < 12 else None
+            # 事例(case2)は1ランに1本まで。3本続けて出すと同じ見た目が並んで表示が落ちる
+            if want_types and posted > 0 and state.get("last_type") == "case2":
+                want_types = tuple(t for t in want_types if t != "case2")
         else:
             want_types = ("ninchi", "hanten", "yt", "bui", "dantei", "winning") if 6 <= hour < 10 else None
         try:

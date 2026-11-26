@@ -22,7 +22,7 @@ CONFIG = {
     # shindan_weekdays: 診断誘導を出す曜日(月=0)。火・金・日の週3本、各日その日の1本目に。
     # 【停止中】2026-07-18〜08-07 は完全停止（シャドウバンのリセット狙い）。
     # from を 2026-08-08 にして自動再開。再開後は1日2本の慎重運用。
-    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 5,  "from": "2026-08-08", "cta_every": 0, "batch": 3,  "spacing": 900, "local_every": 4, "dedup_hours": 168, "shindan_weekdays": [1, 4, 6], "image_ab": True},
+    "diet": {"bank": "content_bank.json",    "state": "state.json",    "log": "post_log.jsonl",    "cap": 5,  "from": "2026-08-08", "cta_every": 0, "batch": 3,  "spacing": 900, "local_every": 4, "dedup_hours": 168, "shindan_weekdays": [1, 4, 6], "image_ab": False},
     # local_every: N投稿に1本を地域特化(local=True)にする（商圏向け）。地域投稿のCTAは2回に1回
     "yu":   {"bank": "content_bank_yu.json", "state": "state_yu.json", "log": "post_log_yu.jsonl", "cap": 28, "from": "2026-06-11", "cta_every": 4, "batch": 12, "spacing": 180, "local_every": 4, "disease_rotate": True, "shindan_weekdays": [0,1,2,3,4,5,6], "shindan_slots": [0, 14], "dedup_hours": 168},
 }
@@ -71,13 +71,13 @@ def fetch_recent(hours=48):
 IMAGE_BASE = "https://raw.githubusercontent.com/seitaiinyu/threads-poster/main/images/"
 
 
-def publish_tree(segments, image=None):
+def publish_tree(segments, image=None, image_at=0):
     """ツリー投稿。image が指定されていれば1投稿目を画像つき(IMAGE)にする。
     画像はリポジトリ(public)の images/ に置いたファイル名で指定する。"""
     prev = None
     ids = []
     for i, text in enumerate(segments):
-        if i == 0 and image:
+        if image and i == image_at:
             p = {"media_type": "IMAGE", "image_url": IMAGE_BASE + image, "text": text}
         else:
             p = {"media_type": "TEXT", "text": text}
@@ -85,7 +85,7 @@ def publish_tree(segments, image=None):
             p["reply_to_id"] = prev
         cid = post(f"{UID}/threads", p)["id"]
         # 画像は取り込みに数秒かかるため少し長めに待つ。失敗時は1回だけ再試行
-        time.sleep(8 if (i == 0 and image) else 2)
+        time.sleep(8 if (image and i == image_at) else 2)
         try:
             pid = post(f"{UID}/threads_publish", {"creation_id": cid})["id"]
         except Exception:
@@ -202,7 +202,7 @@ def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=
     image = tree.get("image")
     if image and CFG.get("image_ab"):
         image = image if (state["idx"] % 2 == 0) else None
-    ids = publish_tree(segs, image)
+    ids = publish_tree(segs, image, int(tree.get("image_at", 0)))
     rec = {"ts": datetime.now(JST).isoformat(), "bank_idx": state["idx"] % len(bank),
            "type": tree.get("type"), "post_ids": ids, "first_id": ids[0],
            "hook": segs[0][:40], "image_used": bool(image)}

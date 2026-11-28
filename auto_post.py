@@ -8,6 +8,7 @@
 """
 import os, re, json, time, urllib.request, urllib.parse, sys
 from datetime import datetime, timezone, timedelta
+from headline_split import fmt_head  # 1投稿目をスマホ向けに改行（投稿時にも適用）
 
 API = "https://graph.threads.net/v1.0"
 DIR = os.path.dirname(os.path.abspath(__file__))
@@ -206,6 +207,7 @@ def post_one(bank, state, cap, seen, target_cat, want_local=False, want_shindan=
     image = tree.get("image")
     if image and CFG.get("image_ab"):
         image = image if (state["idx"] % 2 == 0) else None
+    segs[0] = fmt_head(segs[0])
     ids = publish_tree(segs, image, int(tree.get("image_at", 0)))
     rec = {"ts": datetime.now(JST).isoformat(), "bank_idx": state["idx"] % len(bank),
            "type": tree.get("type"), "post_ids": ids, "first_id": ids[0],

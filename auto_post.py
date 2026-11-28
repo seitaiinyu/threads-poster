@@ -371,7 +371,7 @@ def run_batch(bank, state, cap, seen, n, spacing):
             # A1: 地域投稿は表示が伸びないため朝のゴールデン枠を使わせず、1日の最終投稿(夜)に限定。
             # 頻度も local_every 日に1回に抑える（毎日は出さない）。
             day_num = int(today.replace("-", ""))
-            want_local = local_every > 0 and state["count"] == cap - 1  # 毎日1本(夜の最終枠)
+            want_local = local_every > 0 and (state["count"] == cap - 1 or (state["count"] == cap - 2 and day_num % 2 == 1))  # 毎日1本(夜の最終枠)+奇数日はもう1本=約3割
         else:
             want_local = local_every > 0 and (state["count"] % local_every == 1)
         # 診断誘導: 指定スロット(朝枠の1本目=0, 夜枠の1本目=10)に1本ずつ＝1日2本
